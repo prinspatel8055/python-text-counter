@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Text Counter &middot; Deep Analytics</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- Three.js r128, served locally: FontLoader + TextGeometry are part of the
+     core build in this version, so no extra files and no CDN are needed.
+     The app therefore renders 3D type with zero internet access. -->
+<script src="/static/vendor/three.min.js"></script>
+
+<style>
+/* ===================================================================
+   1. DESIGN TOKENS — premium gold on black
+   =================================================================== */
+:root{
+  --bg:#050506;
+  --bg-2:#0a0a0c;
+  --surface:rgba(255,255,255,.028);
+  --surface-2:rgba(255,255,255,.045);
+  --stroke:rgba(212,175,55,.16);
+  --stroke-strong:rgba(212,175,55,.34);
+
+  --gold:#d4af37;
+  --gold-bright:#f2cf5b;
+  --gold-pale:#ffe9a8;
+  --gold-deep:#8a6a1c;
+  --gold-ink:#c9a227;
+
+  /* sequential gold ramp — low → high (single hue, never rainbow) */
+  --g1:rgba(212,175,55,.10);
+  --g2:rgba(212,175,55,.22);
+  --g3:rgba(212,175,55,.38);
+  --g4:rgba(212,175,55,.56);
+  --g5:rgba(233,196,88,.78);
+  --g6:#f2cf5b;
+
+  --ink:#f6f3ea;
+  --ink-2:#b8b2a2;
+  --ink-3:#7c776c;
+
+  --ok:#4ea87a;
+  --warn:#d98b3a;
+  --bad:#c8584f;
+
+  --r-sm:10px; --r-md:16px; --r-lg:22px;
+  --sans:'Inter',system-ui,sans-serif;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+
+body{
+  background:
+    radial-gradient(1000px 520px at 50% -12%, rgba(212,175,55,.13), transparent 62%),
+    radial-gradient(760px 420px at 100% 8%, rgba(212,175,55,.06), transparent 60%),
+    linear-gradient(180deg,#050506 0%, #08080a 42%, #050506 100%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--sans);
+  min-height:100vh;
+  padding-bottom:72px;
+  overflow-x:hidden;
+}
+
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:#0a0a0c}
+::-webkit-scrollbar-thumb{background:rgba(212,175,55,.3);border-radius:6px}
+::-webkit-scrollbar-thumb:hover{background:rgba(212,175,55,.55)}
+
+::selection{background:rgba(212,175,55,.3);color:#fff}
+
+.wrap{max-width:1240px;margin:0 auto;padding:26px 22px}
+
+/* ===================================================================
+   2. HEADER
+   =================================================================== */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:20px;flex-wrap:wrap;
+  padding-bottom:20px;margin-bottom:26px;
+  border-bottom:1px solid var(--stroke);
+}
+.brand{display:flex;align-items:center;gap:15px}
+.crest{
+  width:50px;height:50px;border-radius:15px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#f5d87a,#d4af37 42%,#8a6a1c);
+  color:#1a1405;font-weight:800;font-size:21px;font-family:var(--serif);
+  box-shadow:0 8px 26px rgba(212,175,55,.34), inset 0 1px 0 rgba(255,255,255,.55);
+}
+.brand h1{
+  font-family:var(--serif);font-size:27px;font-weight:700;letter-spacing:.2px;line-height:1.1;
+  background:linear-gradient(100deg,#fff8e2,#e9c860 45%,#a9852a);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.brand p{font-size:12.5px;color:var(--ink-3);letter-spacing:.32px;margin-top:3px}
+.head-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 13px;border-radius:999px;
+  border:1px solid var(--stroke);background:var(--surface);
+  font-size:12px;color:var(--ink-2);font-family:var(--mono);letter-spacing:.3px;
+}
+.chip b{color:var(--gold-pale);font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 9px var(--ok)}
+.dot.pulse{animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+
+/* ===================================================================
+   3. BUTTONS / CONTROLS
+   =================================================================== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 18px;border-radius:var(--r-sm);border:1px solid var(--stroke);
+  background:var(--surface);color:var(--ink);
+  font-family:var(--sans);font-size:13.5px;font-weight:500;cursor:pointer;
+  transition:.18s ease;white-space:nowrap;
+}
+.btn:hover{background:var(--surface-2);border-color:var(--stroke-strong);transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn.gold{
+  background:linear-gradient(140deg,#f7dd92,#d4af37 48%,#a9852a);
+  color:#1a1405;font-weight:700;border-color:transparent;
+  box-shadow:0 8px 22px rgba(212,175,55,.3);
+}
+.btn.gold:hover{box-shadow:0 12px 30px rgba(212,175,55,.42)}
+.btn.sm{padding:7px 12px;font-size:12px}
+.btn.danger:hover{border-color:rgba(200,88,79,.55);color:#e79a93}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+input[type=text],input[type=date],select,textarea{
+  font-family:var(--sans);color:var(--ink);
+  background:rgba(0,0,0,.34);border:1px solid var(--stroke);
+  border-radius:var(--r-sm);padding:11px 14px;font-size:14px;outline:none;transition:.18s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--stroke-strong);box-shadow:0 0 0 3px rgba(212,175,55,.1)}
+input::placeholder,textarea::placeholder{color:var(--ink-3)}
+select option{background:#0c0c0e}
+
+/* ===================================================================
+   4. PANELS
+   =================================================================== */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--stroke);
+  border-radius:var(--r-lg);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 22px 50px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.05);
+  overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:17px 22px;border-bottom:1px solid var(--stroke);
+  background:linear-gradient(180deg,rgba(212,175,55,.06),transparent);
+}
+.panel-head h2{
+  font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.2px;color:var(--gold-pale);
+  display:flex;align-items:center;gap:10px;
+}
+.panel-head .sub{font-size:11.5px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.4px}
+.panel-body{padding:22px}
+
+.section-label{
+  font-size:11px;letter-spacing:2.4px;text-transform:uppercase;
+  color:var(--gold-ink);font-weight:600;margin:38px 0 14px;
+  display:flex;align-items:center;gap:12px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--stroke),transparent)}
+
+/* ===================================================================
+   5. STAGE (3D)
+   =================================================================== */
+.stage{position:relative;height:330px;background:#000;border-bottom:1px solid var(--stroke)}
+#stageCanvas{display:block;width:100%;height:100%}
+.stage-veil{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(70% 60% at 50% 50%, transparent 38%, rgba(0,0,0,.72) 100%);
+}
+.stage-hint{
+  position:absolute;left:0;right:0;bottom:16px;text-align:center;
+  font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.8px;pointer-events:none;
+}
+.stage-tools{position:absolute;top:14px;right:14px;display:flex;gap:7px;z-index:3}
+.stage-badge{
+  position:absolute;top:14px;left:14px;z-index:3;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--gold-ink);border:1px solid var(--stroke);background:rgba(0,0,0,.5);
+  padding:6px 11px;border-radius:999px;
+}
+
+/* live metric strip */
+.live-strip{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+  gap:1px;background:var(--stroke);border-bottom:1px solid var(--stroke);
+}
+.live-cell{background:#08080a;padding:13px 16px;text-align:center}
+.live-cell .v{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--gold-bright);line-height:1.2}
+.live-cell .k{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-3);margin-top:4px}
+
+.composer{padding:20px 22px}
+textarea#inputText{
+  width:100%;min-height:118px;resize:vertical;line-height:1.65;font-size:15px;
+  background:rgba(0,0,0,.4);
+}
+.composer-row{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.composer-row .hint{font-size:11.5px;color:var(--ink-3);font-family:var(--mono);margin-left:auto}
+kbd{
+  font-family:var(--mono);font-size:10.5px;background:rgba(212,175,55,.12);
+  border:1px solid var(--stroke);border-radius:5px;padding:2px 6px;color:var(--gold-pale);
+}
+
+/* ===================================================================
+   6. KPI GRID
+   =================================================================== */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:14px}
+.kpi{
+  position:relative;padding:18px 18px 16px;border-radius:var(--r-md);
+  background:var(--surface);border:1px solid var(--stroke);overflow:hidden;
+  transition:.2s ease;
+}
+.kpi:hover{border-color:var(--stroke-strong);transform:translateY(-2px);background:var(--surface-2)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.55}
+.kpi .k{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.kpi .v{font-family:var(--mono);font-size:31px;font-weight:700;margin:9px 0 3px;color:var(--gold-pale);letter-spacing:-.6px}
+.kpi .s{font-size:11.5px;color:var(--ink-3)}
+.delta{font-family:var(--mono);font-size:11.5px;font-weight:600}
+.delta.up{color:var(--ok)} .delta.down{color:var(--bad)} .delta.flat{color:var(--ink-3)}
+
+/* ===================================================================
+   7. DEEP ANALYSIS
+   =================================================================== */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:12px}
+.metric{
+  padding:14px 15px;border-radius:var(--r-sm);
+  background:rgba(0,0,0,.28);border:1px solid rgba(212,175,55,.1);
+  transition:.16s;
+}
+.metric:hover{border-color:var(--stroke);background:rgba(212,175,55,.05)}
+.metric .mv{font-family:var(--mono);font-size:21px;font-weight:700;color:var(--gold-bright)}
+.metric .mk{font-size:10.5px;color:var(--ink-3);letter-spacing:.7px;margin-top:4px;text-transform:uppercase}
+.metric .md{font-size:10.5px;color:var(--ink-3);opacity:.72;margin-top:6px;line-height:1.45}
+
+.split{display:grid;grid-template-columns:1.25fr .75fr;gap:18px}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+
+/* composition bar */
+.comp-bar{display:flex;height:16px;border-radius:999px;overflow:hidden;background:rgba(0,0,0,.4);border:1px solid var(--stroke);gap:2px;padding:2px}
+.comp-seg{height:100%;border-radius:999px;transition:width .5s cubic-bezier(.4,0,.2,1);min-width:0}
+.comp-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:13px}
+.comp-legend .li{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
+.comp-legend .sw{width:10px;height:10px;border-radius:3px}
+.comp-legend .n{font-family:var(--mono);color:var(--ink);font-weight:600}
+
+/* readability gauge */
+.gauge-wrap{display:flex;align-items:center;gap:18px}
+.gauge{position:relative;width:104px;height:104px;flex:none}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .center{
+  position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+}
+.gauge .center b{font-family:var(--mono);font-size:22px;color:var(--gold-bright);display:block;line-height:1}
+.gauge .center span{font-size:9.5px;color:var(--ink-3);letter-spacing:1px;text-transform:uppercase}
+
+/* keywords */
+.kw-list{display:flex;flex-direction:column;gap:9px}
+.kw-row{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center}
+.kw-row .w{font-family:var(--mono);font-size:12.5px;color:var(--ink);min-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kw-track{height:7px;border-radius:999px;background:rgba(255,255,255,.05);overflow:hidden}
+.kw-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold-deep),var(--gold-bright));transition:width .5s}
+.kw-row .c{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);min-width:26px;text-align:right}
+
+.empty{
+  padding:34px 20px;text-align:center;color:var(--ink-3);font-size:13.5px;line-height:1.7;
+}
+.empty b{display:block;color:var(--ink-2);font-size:15px;margin-bottom:6px;font-family:var(--serif)}
+
+/* ===================================================================
+   8. CHARTS
+   =================================================================== */
+.chart-host{position:relative;width:100%}
+.chart-host svg{display:block;width:100%;height:auto;overflow:visible}
+.axis-text{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3);letter-spacing:.4px}
+.grid-line{stroke:rgba(255,255,255,.055);stroke-width:1}
+.bar-mark{transition:.16s}
+.bar-mark:hover{filter:brightness(1.35)}
+.val-label{font-family:var(--mono);font-size:9.5px;fill:var(--gold-pale);font-weight:600}
+
+/* 24h heatmap */
+.heat{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+.heat-cell{
+  position:relative;aspect-ratio:1/.82;border-radius:7px;display:grid;place-items:center;
+  border:1px solid rgba(212,175,55,.1);cursor:default;transition:.16s;
+}
+.heat-cell:hover{transform:scale(1.09);border-color:var(--stroke-strong);z-index:2}
+.heat-cell span{font-family:var(--mono);font-size:9px;color:var(--ink-3)}
+.heat-cell.hot span{color:#1a1405;font-weight:700}
+.heat-scale{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--ink-3);margin-top:12px}
+.heat-scale i{width:22px;height:9px;border-radius:3px;display:inline-block}
+
+/* tooltip */
+#tip{
+  position:fixed;z-index:999;pointer-events:none;opacity:0;transition:opacity .12s;
+  background:rgba(10,10,12,.97);border:1px solid var(--stroke-strong);
+  border-radius:9px;padding:9px 12px;font-size:12px;color:var(--ink);
+  box-shadow:0 12px 30px rgba(0,0,0,.6);max-width:230px;
+}
+#tip b{color:var(--gold-pale);display:block;margin-bottom:3px;font-size:12.5px}
+#tip .r{font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+
+/* ===================================================================
+   9. HISTORY TABLE
+   =================================================================== */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filters input[type=text]{min-width:210px;flex:1}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{
+  text-align:left;padding:12px 14px;font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--stroke);white-space:nowrap;
+  background:rgba(212,175,55,.035);
+}
+tbody td{padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.045);vertical-align:top}
+tbody tr{transition:.14s}
+tbody tr:hover{background:rgba(212,175,55,.045)}
+.cell-id{font-family:var(--mono);color:var(--gold-ink);font-size:12px}
+.cell-text{max-width:340px;line-height:1.5;word-break:break-word}
+.cell-time{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.pill{
+  display:inline-block;font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:6px;
+  background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.2);color:var(--gold-pale);
+}
+.row-detail td{background:rgba(0,0,0,.34);padding:16px 18px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:10px}
+.detail-grid .d{padding:9px 11px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(212,175,55,.09)}
+.detail-grid .d b{display:block;font-family:var(--mono);font-size:15px;color:var(--gold-bright)}
+.detail-grid .d span{font-size:10px;color:var(--ink-3);letter-spacing:.6px;text-transform:uppercase}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:30px;transform:translate(-50%,260%);opacity:0;
+  background:linear-gradient(140deg,#f7dd92,#d4af37 48%,#a9852a);color:#1a1405;
+  padding:13px 24px;border-radius:999px;font-weight:700;font-size:13.5px;
+  box-shadow:0 14px 40px rgba(212,175,55,.42);z-index:1000;
+  transition:transform .35s cubic-bezier(.34,1.4,.64,1), opacity .25s;
+}
+#toast.show{transform:translate(-50%,0);opacity:1}
+#toast.err{background:linear-gradient(140deg,#e58b83,#c8584f);color:#fff}
+
+footer{
+  margin-top:44px;padding-top:22px;border-top:1px solid var(--stroke);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  font-size:11.5px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.3px;
+}
+footer a{color:var(--gold-ink);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+@media(max-width:640px){
+  .wrap{padding:18px 14px}
+  .brand h1{font-size:22px}
+  .stage{height:250px}
+  .heat{grid-template-columns:repeat(6,1fr)}
+  .kpi .v{font-size:26px}
+}
+</style>
+</head>
+
+<body data-palette="#d4af37">
+
+<div class="wrap">
+
+  <!-- ============================ HEADER ============================ -->
+  <header>
+    <div class="brand">
+      <div class="crest">T</div>
+      <div>
+        <h1>Text Counter &amp; Deep Analytics</h1>
+        <p>FastAPI &middot; SQLite &middot; Three.js &mdash; every entry measured on 20+ dimensions</p>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="chip"><span class="dot pulse" id="dbDot"></span> SQLite <b id="dbName">counter.db</b></div>
+      <div class="chip" id="clockChip">--:--:--</div>
+      <button class="btn sm" onclick="exportData('csv')">Export CSV</button>
+      <button class="btn sm" onclick="exportData('json')">JSON</button>
+    </div>
+  </header>
+
+  <!-- ============================ COMPOSER + 3D ============================ -->
+  <section class="panel">
+    <div class="stage">
+      <canvas id="stageCanvas"></canvas>
+      <div class="stage-veil"></div>
+      <div class="stage-badge">Live 3D Type</div>
+      <div class="stage-tools">
+        <button class="btn sm" id="btnSpin" onclick="toggleSpin()">Pause spin</button>
+        <button class="btn sm" onclick="cycleMaterial()">Finish</button>
+      </div>
+      <div class="stage-hint" id="stageHint">Start typing &mdash; your text is extruded in real time</div>
+    </div>
+
+    <div class="live-strip">
+      <div class="live-cell"><div class="v" id="lvChars">0</div><div class="k">Characters</div></div>
+      <div class="live-cell"><div class="v" id="lvWords">0</div><div class="k">Words</div></div>
+      <div class="live-cell"><div class="v" id="lvUnique">0</div><div class="k">Unique</div></div>
+      <div class="live-cell"><div class="v" id="lvSent">0</div><div class="k">Sentences</div></div>
+      <div class="live-cell"><div class="v" id="lvLines">0</div><div class="k">Lines</div></div>
+      <div class="live-cell"><div class="v" id="lvRead">0s</div><div class="k">Read time</div></div>
+    </div>
+
+    <div class="composer">
+      <textarea id="inputText" placeholder="Type or paste anything here. The 3D headline above follows your first line, the strip updates as you type, and Enter saves the entry to SQLite with its full metric set." autofocus></textarea>
+      <div class="composer-row">
+        <button class="btn gold" id="btnSave" onclick="saveText()">Analyze &amp; Save</button>
+        <button class="btn" onclick="analyzeOnly()">Analyze only</button>
+        <button class="btn" onclick="clearInput()">Clear</button>
+        <span class="hint"><kbd>Enter</kbd> to save &middot; <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ KPIs ============================ -->
+  <div class="section-label">Overview</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- ============================ DEEP ANALYSIS ============================ -->
+  <div class="section-label">Text intelligence &mdash; <span id="analysisSource" style="color:var(--ink-3);letter-spacing:.4px;text-transform:none;font-weight:400">nothing analyzed yet</span></div>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Full metric breakdown</h2>
+      <span class="sub" id="analysisStamp">awaiting input</span>
+    </div>
+    <div class="panel-body">
+      <div id="analysisEmpty" class="empty">
+        <b>No text analyzed yet</b>
+        Type something above, then press <kbd>Enter</kbd> or hit <em>Analyze</em>.<br>
+        You will get counts, composition, lexical diversity, readability and keywords.
+      </div>
+
+      <div id="analysisBody" style="display:none">
+        <div class="metric-grid" id="metricGrid"></div>
+
+        <div class="split" style="margin-top:22px">
+          <div>
+            <div class="section-label" style="margin:0 0 12px">Character composition</div>
+            <div class="comp-bar" id="compBar"></div>
+            <div class="comp-legend" id="compLegend"></div>
+
+            <div class="section-label" style="margin:26px 0 12px">Readability</div>
+            <div class="gauge-wrap">
+              <div class="gauge">
+                <svg width="104" height="104" viewBox="0 0 104 104">
+                  <circle cx="52" cy="52" r="44" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="9"/>
+                  <circle id="gaugeArc" cx="52" cy="52" r="44" fill="none" stroke="url(#goldGrad)" stroke-width="9"
+                          stroke-linecap="round" stroke-dasharray="276.5" stroke-dashoffset="276.5"
+                          style="transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)"/>
+                  <defs>
+                    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stop-color="#8a6a1c"/><stop offset="100%" stop-color="#f2cf5b"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="center"><div><b id="gaugeVal">0</b><span>Flesch</span></div></div>
+              </div>
+              <div>
+                <div style="font-family:var(--serif);font-size:20px;color:var(--gold-pale)" id="readLabel">&mdash;</div>
+                <div style="font-size:12.5px;color:var(--ink-3);line-height:1.65;margin-top:6px;max-width:330px" id="readNote">
+                  Flesch Reading Ease scores text 0&ndash;100. Higher is easier: 80+ reads like a chat message, below 30 reads like a legal clause.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-label" style="margin:0 0 12px">Top keywords</div>
+            <div class="kw-list" id="kwList"></div>
+            <div style="font-size:11.5px;color:var(--ink-3);margin-top:14px;line-height:1.6">
+              Stop-words (the, and, is&hellip;) and 1&ndash;2 letter tokens are removed before ranking, so the list shows what the text is actually about.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ TIME ANALYTICS ============================ -->
+  <div class="section-label">Activity over time</div>
+
+  <div class="split" style="align-items:start">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Day-wise entries</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="rangeSelect" onchange="loadDaywise()" style="padding:7px 10px;font-size:12px">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+          <select id="metricSelect" onchange="renderDaywise()" style="padding:7px 10px;font-size:12px">
+            <option value="count">Entries</option>
+            <option value="words">Words</option>
+            <option value="chars">Characters</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="chart-host" id="dayChart"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Weekday pattern</h2>
+        <span class="sub">lifetime</span>
+      </div>
+      <div class="panel-body">
+        <div class="chart-host" id="weekChart"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:18px">
+    <div class="panel-head">
+      <h2>24-hour rhythm</h2>
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="date" id="hourDate" onchange="loadHourly()" style="padding:7px 10px;font-size:12px">
+        <span class="sub" id="hourSummary">&mdash;</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="heat" id="heatGrid"></div>
+      <div class="heat-scale">
+        <span>Quiet</span>
+        <i style="background:var(--g1)"></i><i style="background:var(--g2)"></i><i style="background:var(--g3)"></i>
+        <i style="background:var(--g4)"></i><i style="background:var(--g5)"></i><i style="background:var(--g6)"></i>
+        <span>Busy</span>
+        <span style="margin-left:auto" id="peakNote"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ HISTORY ============================ -->
+  <div class="section-label">Saved entries</div>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>History</h2>
+      <div class="filters">
+        <input type="text" id="searchInput" placeholder="Search text…" oninput="debouncedLoad()">
+        <input type="date" id="dateFilter" onchange="loadHistory()">
+        <select id="sortSelect" onchange="loadHistory()" style="padding:9px 12px;font-size:13px">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="words">Most words</option>
+          <option value="longest">Longest</option>
+        </select>
+        <button class="btn sm" onclick="resetFilters()">Reset</button>
+        <button class="btn sm danger" onclick="clearAll()">Clear all</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:56px">ID</th>
+            <th>Text</th>
+            <th style="width:80px">Words</th>
+            <th style="width:80px">Chars</th>
+            <th style="width:96px">Read</th>
+            <th style="width:150px">Saved at</th>
+            <th style="width:96px"></th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>Text Counter v2.0 &middot; FastAPI + SQLite + Three.js</span>
+    <span>API docs at <a href="/docs" target="_blank">/docs</a> &middot; <span id="footStats">—</span></span>
+  </footer>
+</div>
+
+<div id="tip"></div>
+<div id="toast">Saved</div>
+
+<script>
+/* ===================================================================
+   SECTION 1 — small helpers
+   =================================================================== */
+const $  = (id) => document.getElementById(id);
+const fmt = (n) => (n === null || n === undefined || isNaN(n)) ? '0' : Number(n).toLocaleString('en-US');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function secs(s){
+  s = Number(s) || 0;
+  if (s < 60) return Math.round(s) + 's';
+  const m = Math.floor(s / 60), r = Math.round(s % 60);
+  if (m < 60) return r ? `${m}m ${r}s` : `${m}m`;
+  return `${Math.floor(m/60)}h ${m%60}m`;
+}
+
+function toast(msg, isError){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', !!isError);
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+async function api(path, opts){
+  const res = await fetch(path, opts);
+  if (!res.ok){
+    let detail = res.statusText;
+    try { detail = (await res.json()).detail || detail; } catch(e){}
+    throw new Error(detail);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+/* shared tooltip for every chart */
+const tip = $('tip');
+function showTip(evt, title, rows){
+  tip.innerHTML = `<b>${esc(title)}</b>` + rows.map(r => `<div class="r">${esc(r)}</div>`).join('');
+  tip.style.opacity = 1;
+  moveTip(evt);
+}
+function moveTip(evt){
+  const pad = 14;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  const r = tip.getBoundingClientRect();
+  if (x + r.width  > innerWidth  - 8) x = evt.clientX - r.width  - pad;
+  if (y + r.height > innerHeight - 8) y = evt.clientY - r.height - pad;
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+function hideTip(){ tip.style.opacity = 0; }
+
+/* ===================================================================
+   SECTION 2 — Three.js stage: real extruded 3D text
+   =================================================================== */
+const DEFAULT_TEXT = 'JAY MELDI MAA';   // what the stage shows when the box is empty
+const GLYPH_SIZE   = 4.6;               // extruded cap height
+const TRACKING     = 0.12;              // extra space between letters
+const STAGE_WIDTH  = 26;                // world units the headline is fitted into
+const STAGE_LIMIT  = 20;                // characters before the headline is trimmed
+
+const STAGE = {
+  ready:false, font:null, spin:true, spinAmount:1, matIndex:0,
+  scene:null, camera:null, renderer:null, group:null, clock:null,
+  target:DEFAULT_TEXT,
+  letters:[],        // live letters, in reading order
+  dying:[],          // letters animating out
+  fitTarget:1
+};
+
+const FINISHES = [
+  { name:'Polished Gold',  color:0xd4af37, emissive:0x3a2a08, metalness:1.00, roughness:0.22 },
+  { name:'Brushed Brass',  color:0xc9a227, emissive:0x2a1f06, metalness:0.85, roughness:0.48 },
+  { name:'Champagne',      color:0xf0dca0, emissive:0x40380f, metalness:0.95, roughness:0.16 },
+  { name:'Antique Bronze', color:0x8a6a1c, emissive:0x1a1204, metalness:0.90, roughness:0.62 }
+];
+
+/* Paint an equirectangular "studio" and pre-filter it so rough surfaces
+   blur their reflections correctly. Returns a texture, or null if this
+   build of Three.js cannot pre-filter (the scene still renders). */
+function makeStudioEnv(renderer){
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 256;
+    const g = cv.getContext('2d');
+
+    /* sky → horizon → floor */
+    const grad = g.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0.00, '#ffd79a');   // warm ceiling — keeps the metal gold, not silver
+    grad.addColorStop(0.34, '#8a6f3c');
+    grad.addColorStop(0.52, '#181410');   // horizon
+    grad.addColorStop(1.00, '#040404');   // dark floor
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 512, 256);
+
+    /* two soft light strips give the bevels their travelling highlight */
+    [[110, 46], [370, 34]].forEach(([x, y]) => {
+      const s = g.createRadialGradient(x, y, 4, x, y, 96);
+      s.addColorStop(0, 'rgba(255,242,214,0.92)');
+      s.addColorStop(1, 'rgba(255,242,214,0)');
+      g.fillStyle = s;
+      g.fillRect(x - 96, y - 96, 192, 192);
+    });
+
+    const tex = new THREE.CanvasTexture(cv);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.encoding = THREE.sRGBEncoding;
+
+    if (THREE.PMREMGenerator){
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      const rt = pmrem.fromEquirectangular(tex);
+      tex.dispose();
+      pmrem.dispose();
+      return rt.texture;
+    }
+    return tex;
+  } catch(err){
+    console.warn('environment map unavailable', err);
+    return null;
+  }
+}
+
+function initStage(){
+  if (typeof THREE === 'undefined'){
+    $('stageHint').textContent = 'WebGL libraries unavailable — dashboard still fully functional';
+    return;
+  }
+  const canvas = $('stageCanvas');
+  const host = canvas.parentElement;
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x000000, 0.018);
+
+  const camera = new THREE.PerspectiveCamera(42, host.clientWidth / host.clientHeight, 0.1, 400);
+  camera.position.set(0, 1.4, 34);
+
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+  } catch(e){
+    $('stageHint').textContent = 'WebGL not supported by this browser — dashboard still fully functional';
+    return;
+  }
+  renderer.setSize(host.clientWidth, host.clientHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+
+  /* An environment map is what actually makes metal look like metal:
+     a polished surface shows almost nothing of its own colour, it shows
+     what is around it. Lamps alone give a few hot spots on an otherwise
+     black shape, which is why the old headline looked dull. This builds
+     a small studio in a canvas — a bright warm ceiling, two light
+     strips, a dark floor — and hands it to the scene as reflections. */
+  scene.environment = makeStudioEnv(renderer);
+
+  /* Lamps on top of the environment: a warm key, a cool rim, a front fill. */
+  scene.add(new THREE.AmbientLight(0xfff0cf, 0.22));
+
+  const key  = new THREE.PointLight(0xffd98a, 1.5, 240); key.position.set(22, 18, 38);  scene.add(key);
+  const rim  = new THREE.PointLight(0x8fb4ff, 0.9, 240); rim.position.set(-26, -6, 20); scene.add(rim);
+  const fill = new THREE.PointLight(0xfff6e0, 0.8, 280); fill.position.set(-20, 6, 58); scene.add(fill);
+  const top  = new THREE.DirectionalLight(0xfff3d0, 0.7); top.position.set(0, 26, 12);  scene.add(top);
+
+  /* gold dust particles */
+  const N = 900, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N * 3; i++) pos[i] = (Math.random() - 0.5) * 140;
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
+    color:0xd4af37, size:0.30, transparent:true, opacity:0.55, sizeAttenuation:true
+  }));
+  scene.add(dust);
+
+  /* Floor plane for grounding. It is kept almost perfectly black and
+     barely reflective — with the environment map switched on, a shiny
+     floor turns into a grey haze across the lower half of the stage. */
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(220, 220),
+    new THREE.MeshStandardMaterial({
+      color:0x000000, metalness:0.35, roughness:0.85, envMapIntensity:0.12
+    })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -7.5;
+  scene.add(floor);
+
+  const group = new THREE.Group();
+  scene.add(group);
+
+  Object.assign(STAGE, { scene, camera, renderer, group, clock:new THREE.Clock(), dust });
+
+  /* load a real typeface so we can extrude true glyph geometry */
+  if (THREE.FontLoader){
+    new THREE.FontLoader().load(
+      '/static/vendor/fonts/helvetiker_bold.typeface.json',
+      (font) => { STAGE.font = font; STAGE.ready = true; buildText(STAGE.target); },
+      undefined,
+      () => { STAGE.ready = true; buildText(STAGE.target); }   // fall back to block glyphs
+    );
+  } else {
+    STAGE.ready = true;
+    buildText(STAGE.target);
+  }
+
+  addEventListener('resize', () => {
+    const w = host.clientWidth, h = host.clientHeight;
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    layoutLetters();          // re-fit without rebuilding any geometry
+  });
+
+  animate();
+}
+
+/* --- geometry cache -------------------------------------------------
+   Every glyph is extruded once and then shared by any mesh that needs
+   it, so typing the same letter again costs nothing. */
+const GLYPH_CACHE = new Map();
+let REF_CENTER = null;   // vertical offset that puts the cap-height band on the axis
+
+function glyphAdvance(ch){
+  /* True horizontal advance from the typeface metrics, so spacing is
+     properly typeset instead of one fixed gap per letter. */
+  const data = STAGE.font && STAGE.font.data;
+  if (!data) return GLYPH_SIZE * 0.66;
+  const g = data.glyphs[ch];
+  const ha = (g && g.ha) || data.resolution * 0.5;
+  return (ha / data.resolution) * GLYPH_SIZE + TRACKING;
+}
+
+function glyphGeometry(ch){
+  if (GLYPH_CACHE.has(ch)) return GLYPH_CACHE.get(ch);
+
+  if (REF_CENTER === null){
+    const ref = new THREE.TextGeometry('H', { font:STAGE.font, size:GLYPH_SIZE, height:0.1 });
+    ref.computeBoundingBox();
+    REF_CENTER = (ref.boundingBox.max.y + ref.boundingBox.min.y) / 2;
+    ref.dispose();
+  }
+
+  const geo = new THREE.TextGeometry(ch, {
+    font: STAGE.font, size: GLYPH_SIZE, height: 1.25,
+    curveSegments: 6, bevelEnabled: true,
+    bevelThickness: 0.16, bevelSize: 0.14, bevelSegments: 3
+  });
+  /* Shift every glyph by the SAME amount so all letters share one
+     baseline — centring each glyph individually would make 'a' float
+     above 'T'. */
+  geo.translate(0, -REF_CENTER, 0);
+
+  GLYPH_CACHE.set(ch, geo);
+  return geo;
+}
+
+/* This build of Three.js has no automatic colour management, but the
+   renderer writes sRGB. A hex picked in sRGB must therefore be converted
+   to linear first, otherwise every colour is output far too light —
+   which is what turned the gold into pale silver. */
+const srgb = hex => new THREE.Color(hex).convertSRGBToLinear();
+
+function makeMaterial(){
+  const f = FINISHES[STAGE.matIndex];
+  return new THREE.MeshStandardMaterial({
+    color:srgb(f.color), emissive:srgb(f.emissive),
+    metalness:f.metalness, roughness:f.roughness,
+    envMapIntensity:1.15,
+    transparent:true, opacity:1
+  });
+}
+
+/* Repaint every existing letter instead of rebuilding the headline, so
+   switching finish is instant and does not restart the animation. */
+function applyFinish(){
+  const f = FINISHES[STAGE.matIndex];
+  STAGE.letters.concat(STAGE.dying).forEach(L => {
+    if (!L.mesh) return;                 // spaces carry no mesh
+    const mats = Array.isArray(L.mesh.material) ? L.mesh.material : [L.mesh.material];
+    mats.forEach(m => {
+      if (m.map) return;                 // keep the canvas glyph face in the fallback
+      m.color.copy(srgb(f.color));
+      m.emissive.copy(srgb(f.emissive));
+      m.metalness = f.metalness;
+      m.roughness = f.roughness;
+    });
+  });
+}
+
+/* --- text preparation ----------------------------------------------- */
+function stageText(raw){
+  let text = (raw || '').split('\n')[0].trim();
+
+  /* The bundled typeface carries Latin glyphs only, and Three.js draws a
+     missing glyph as "?". Drop what the font cannot render so Devanagari
+     or emoji do not turn the headline into a row of question marks. */
+  if (STAGE.font && STAGE.font.data && STAGE.font.data.glyphs){
+    const glyphs = STAGE.font.data.glyphs;
+    text = text.split('').filter(ch => ch === ' ' || glyphs[ch]).join('').replace(/\s+/g, ' ').trim();
+  }
+
+  /* Trim to whole words so the headline never ends mid-word. */
+  if (text.length > STAGE_LIMIT){
+    const cut = text.slice(0, STAGE_LIMIT);
+    const lastSpace = cut.lastIndexOf(' ');
+    text = (lastSpace > 6 ? cut.slice(0, lastSpace) : cut) + '...';
+  }
+
+  return text || DEFAULT_TEXT;
+}
+
+function makeLetter(ch){
+  let mesh;
+
+  if (STAGE.font && THREE.TextGeometry){
+    mesh = new THREE.Mesh(glyphGeometry(ch), makeMaterial());
+  } else {
+    /* fallback: an extruded slab carrying a canvas-drawn glyph face */
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#d4af37'; ctx.fillRect(0, 0, 128, 128);
+    ctx.fillStyle = '#140f02';
+    ctx.font = 'bold 92px Inter, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(ch.toUpperCase(), 64, 70);
+
+    const face = new THREE.MeshStandardMaterial({
+      map:new THREE.CanvasTexture(cv), metalness:0.9, roughness:0.3, transparent:true
+    });
+    const side = makeMaterial();
+    mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5, 2.5, 0.9),
+      [side, side, side, side, face, side]
+    );
+  }
+
+  mesh.position.set(0, 0, -7);
+  mesh.scale.setScalar(0.01);
+  STAGE.group.add(mesh);
+  return mesh;
+}
+
+/* --- the incremental build ------------------------------------------
+   The old version tore down the whole headline on every keystroke,
+   which is why typing looked like a stutter. This one diffs the new
+   string against what is already on stage: letters that still match
+   are left running, removed letters fly out, and only genuinely new
+   letters are created and animated in. */
+function buildText(raw){
+  if (!STAGE.ready || !STAGE.group) return;
+  STAGE.target = raw;
+
+  const chars = stageText(raw).split('');
+  const live = STAGE.letters;
+
+  /* how much of the line is unchanged? */
+  let common = 0;
+  while (common < live.length && common < chars.length && live[common].ch === chars[common]) common++;
+
+  /* letters past the common prefix leave the stage */
+  for (let i = common; i < live.length; i++){
+    const L = live[i];
+    L.dying = true;
+    L.t = 1;
+    STAGE.dying.push(L);
+  }
+  STAGE.letters = live.slice(0, common);
+
+  /* new letters drop in, staggered so a pasted word cascades */
+  for (let i = common; i < chars.length; i++){
+    const ch = chars[i];
+    STAGE.letters.push({
+      ch,
+      mesh: ch === ' ' ? null : makeLetter(ch),
+      advance: glyphAdvance(ch),
+      t: 0,
+      delay: (i - common) * 0.045,
+      phase: i * 0.4,
+      x: 0
+    });
+  }
+
+  layoutLetters();
+}
+
+/* Measure the line and hand every letter the x it should glide to. */
+function layoutLetters(){
+  let total = 0;
+  STAGE.letters.forEach(L => { total += L.advance; });
+
+  let x = -total / 2;
+  STAGE.letters.forEach(L => {
+    L.x = x;
+    x += L.advance;
+  });
+
+  STAGE.fitTarget = Math.min(1, STAGE_WIDTH / Math.max(total, 0.001));
+}
+
+const easeOutBack = t => { const c = 1.70158, d = c + 1; return 1 + d * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+
+function animate(){
+  requestAnimationFrame(animate);
+  if (!STAGE.renderer) return;
+
+  /* Clamped so a backgrounded tab does not jump on return. Kept
+     generous enough that a low frame rate does not stretch the
+     entrance timeline into slow motion. */
+  const dt = Math.min(STAGE.clock.getDelta(), 0.1);
+  const t  = STAGE.clock.elapsedTime;
+  const group = STAGE.group;
+
+  if (group){
+    if (STAGE.spin){
+      STAGE.spinAmount = Math.min(1, (STAGE.spinAmount ?? 1) + dt * 2);
+    } else {
+      STAGE.spinAmount = Math.max(0, (STAGE.spinAmount ?? 1) - dt * 2);
+    }
+    const s = easeOutCubic(STAGE.spinAmount);
+    group.rotation.y = Math.sin(t * 0.42) * 0.42 * s;
+    group.rotation.x = Math.sin(t * 0.30) * 0.10 * s;
+    group.position.y = Math.sin(t * 0.85) * 0.35;
+
+    /* group scale eases toward the fit factor, so the line resizes
+       smoothly as it grows instead of snapping */
+    const cur = group.scale.x;
+    group.scale.setScalar(cur + (STAGE.fitTarget - cur) * (1 - Math.exp(-dt * 9)));
+
+    /* letters: entrance timeline, then glide toward the target x */
+    STAGE.letters.forEach(L => {
+      if (!L.mesh) return;
+      if (L.delay > 0){ L.delay -= dt; L.mesh.visible = false; return; }
+      L.mesh.visible = true;
+
+      L.t = Math.min(1, L.t + dt / 0.34);
+      const e = easeOutBack(L.t);
+
+      L.mesh.scale.setScalar(Math.max(0.001, e));
+      L.mesh.position.x += (L.x - L.mesh.position.x) * (1 - Math.exp(-dt * 14));
+      L.mesh.position.z = (1 - easeOutCubic(L.t)) * -7;
+      L.mesh.rotation.x = (1 - easeOutCubic(L.t)) * -1.15;
+      L.mesh.position.y = Math.sin(t * 1.5 + L.phase) * 0.22 * L.t;
+      setOpacity(L.mesh, easeOutCubic(L.t));
+    });
+
+    /* letters on the way out */
+    for (let i = STAGE.dying.length - 1; i >= 0; i--){
+      const L = STAGE.dying[i];
+      L.t -= dt / 0.22;
+      if (L.t <= 0){
+        if (L.mesh){ group.remove(L.mesh); disposeMaterial(L.mesh); }
+        STAGE.dying.splice(i, 1);
+        continue;
+      }
+      if (!L.mesh) { STAGE.dying.splice(i, 1); continue; }
+      L.mesh.scale.setScalar(Math.max(0.001, L.t));
+      L.mesh.position.y += dt * 3.2;
+      L.mesh.rotation.z += dt * 2.6;
+      setOpacity(L.mesh, L.t);
+    }
+  }
+
+  if (STAGE.dust){
+    STAGE.dust.rotation.y = t * 0.018;
+    STAGE.dust.rotation.x = t * 0.008;
+  }
+  STAGE.renderer.render(STAGE.scene, STAGE.camera);
+}
+
+function setOpacity(mesh, v){
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  mats.forEach(m => { m.opacity = v; });
+}
+/* geometries are shared through GLYPH_CACHE, so only materials are freed */
+function disposeMaterial(mesh){
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  mats.forEach(m => m.dispose && m.dispose());
+}
+
+function toggleSpin(){
+  STAGE.spin = !STAGE.spin;
+  $('btnSpin').textContent = STAGE.spin ? 'Pause spin' : 'Resume spin';
+}
+function cycleMaterial(){
+  STAGE.matIndex = (STAGE.matIndex + 1) % FINISHES.length;
+  applyFinish();
+  toast(FINISHES[STAGE.matIndex].name);
+}
+
+/* ===================================================================
+   SECTION 3 — live client-side metrics (instant, no network)
+   =================================================================== */
+const STOP = new Set(('a about above after again all am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers him his how i if in into is it its just me more most my no nor not now of off on once only or other our out over own same she should so some such than that the their them then there these they this those through to too under until up very was we were what when where which while who whom why will with would you your').split(' '));
+
+function localAnalyze(text){
+  const chars = text.length;
+  const tokens = text.match(/\S+/g) || [];
+  const clean = (text.match(/[A-Za-z0-9']+/g) || []).map(w => w.toLowerCase());
+  const uniq = new Set(clean).size;
+  const sentences = (text.match(/[^.!?\n]+[.!?]*/g) || []).filter(s => s.trim()).length;
+  const lines = text ? text.split('\n').length : 0;
+  return {
+    char_count: chars,
+    word_count: tokens.length,
+    unique_word_count: uniq,
+    sentence_count: sentences,
+    line_count: lines,
+    reading_seconds: tokens.length / 200 * 60
+  };
+}
+
+function updateLive(){
+  const text = $('inputText').value;
+  const m = localAnalyze(text);
+  $('lvChars').textContent  = fmt(m.char_count);
+  $('lvWords').textContent  = fmt(m.word_count);
+  $('lvUnique').textContent = fmt(m.unique_word_count);
+  $('lvSent').textContent   = fmt(m.sentence_count);
+  $('lvLines').textContent  = fmt(m.line_count);
+  $('lvRead').textContent   = secs(m.reading_seconds);
+}
+
+/* ===================================================================
+   SECTION 4 — deep analysis rendering
+   =================================================================== */
+const METRIC_SPECS = [
+  ['char_count',       'Characters',       'Every character including spaces'],
+  ['char_no_space',    'Chars no space',   'Spaces, tabs and newlines removed'],
+  ['word_count',       'Words',            'Whitespace-separated tokens'],
+  ['unique_word_count','Unique words',     'Distinct words, case-insensitive'],
+  ['sentence_count',   'Sentences',        'Split on . ! ? and line breaks'],
+  ['paragraph_count',  'Paragraphs',       'Blocks separated by a blank line'],
+  ['line_count',       'Lines',            'Newline-separated lines'],
+  ['syllable_count',   'Syllables',        'Vowel-group heuristic'],
+  ['avg_word_len',     'Avg word length',  'Mean characters per word'],
+  ['avg_sentence_len', 'Avg sentence',     'Mean words per sentence'],
+  ['lexical_diversity','Lexical diversity','Unique ÷ total words, as %'],
+  ['longest_word',     'Longest word',     'Longest single token'],
+];
+
+function renderAnalysis(a, sourceLabel){
+  $('analysisEmpty').style.display = 'none';
+  $('analysisBody').style.display  = '';
+  $('analysisSource').textContent  = sourceLabel;
+  $('analysisStamp').textContent   = new Date().toLocaleTimeString();
+
+  /* metric tiles */
+  $('metricGrid').innerHTML = METRIC_SPECS.map(([key, label, note]) => {
+    let v = a[key];
+    if (key === 'lexical_diversity') v = (v ?? 0) + '%';
+    else if (typeof v === 'number')  v = (v % 1 ? v.toFixed(2) : fmt(v));
+    else v = v ? esc(v) : '—';
+    return `<div class="metric">
+      <div class="mv" style="${String(v).length > 9 ? 'font-size:14px;word-break:break-all' : ''}">${v}</div>
+      <div class="mk">${label}</div>
+      <div class="md">${note}</div>
+    </div>`;
+  }).join('') + `
+    <div class="metric">
+      <div class="mv">${secs(a.reading_seconds)}</div>
+      <div class="mk">Reading time</div><div class="md">At 200 words per minute</div>
+    </div>
+    <div class="metric">
+      <div class="mv">${secs(a.speaking_seconds ?? 0)}</div>
+      <div class="mk">Speaking time</div><div class="md">At 130 words per minute</div>
+    </div>`;
+
+  /* composition bar — sequential gold ramp, one hue */
+  const parts = [
+    ['Letters',     a.letters,     'var(--g6)'],
+    ['Digits',      a.digits,      'var(--g4)'],
+    ['Spaces',      a.spaces,      'var(--g2)'],
+    ['Punctuation', a.punctuation, 'var(--g3)']
+  ].filter(p => p[1] > 0);
+
+  const total = parts.reduce((s, p) => s + p[1], 0) || 1;
+  $('compBar').innerHTML = parts.map(([n, v, c]) =>
+    `<div class="comp-seg" style="width:${(v / total * 100).toFixed(2)}%;background:${c}" title="${n}: ${v}"></div>`
+  ).join('');
+  $('compLegend').innerHTML = parts.map(([n, v, c]) =>
+    `<div class="li"><span class="sw" style="background:${c}"></span>${n} <span class="n">${fmt(v)}</span>
+     <span style="color:var(--ink-3)">(${(v / total * 100).toFixed(1)}%)</span></div>`
+  ).join('') + `
+    <div class="li"><span class="sw" style="background:transparent;border:1px solid var(--stroke)"></span>
+      Uppercase <span class="n">${fmt(a.uppercase)}</span> · Vowels <span class="n">${fmt(a.vowels)}</span></div>`;
+
+  /* readability gauge */
+  const score = Math.max(0, Math.min(100, a.flesch_score ?? 0));
+  $('gaugeArc').style.strokeDashoffset = (276.5 - 276.5 * score / 100).toFixed(1);
+  $('gaugeVal').textContent  = score.toFixed(0);
+  $('readLabel').textContent = a.readability || '—';
+
+  /* keywords */
+  const kws = a.keywords || [];
+  if (!kws.length){
+    $('kwList').innerHTML = `<div style="color:var(--ink-3);font-size:13px">No keywords yet — add a longer sentence.</div>`;
+  } else {
+    const max = Math.max(...kws.map(k => k.count));
+    $('kwList').innerHTML = kws.map(k => `
+      <div class="kw-row">
+        <div class="w" title="${esc(k.word)}">${esc(k.word)}</div>
+        <div class="kw-track"><div class="kw-fill" style="width:${(k.count / max * 100).toFixed(1)}%"></div></div>
+        <div class="c">${k.count}</div>
+      </div>`).join('');
+  }
+}
+
+/* ===================================================================
+   SECTION 5 — KPI grid
+   =================================================================== */
+function renderKPIs(s){
+  const d = s.change_vs_yesterday || 0;
+  const dCls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+  const dTxt = d > 0 ? `▲ ${d}%` : d < 0 ? `▼ ${Math.abs(d)}%` : '— no change';
+
+  const peakHour = (s.peak_hour === null || s.peak_hour === undefined)
+    ? '—' : String(s.peak_hour).padStart(2, '0') + ':00';
+
+  const cards = [
+    ['Total entries', fmt(s.overall),            `${fmt(s.active_days)} active day${s.active_days === 1 ? '' : 's'}`],
+    ['Today',         fmt(s.today),              `<span class="delta ${dCls}">${dTxt}</span> vs yesterday`],
+    ['Last hour',     fmt(s.last_1h),            `${fmt(s.last_30m)} in the last 30 min`],
+    ['This week',     fmt(s.this_week),          `${fmt(s.this_week_words)} words logged`],
+    ['Total words',   fmt(s.total_words),        `${fmt(s.avg_words_per_entry)} avg per entry`],
+    ['Total chars',   fmt(s.total_chars),        `${fmt(s.total_sentences)} sentences`],
+    ['Avg word len',  (s.avg_word_length ?? 0).toFixed(2), `Longest entry: ${fmt(s.longest_entry_words)} words`],
+    ['Peak hour',     peakHour,                  `${fmt(s.peak_hour_count)} entries in that hour`],
+    ['Reading time',  secs(s.total_reading_seconds), 'Whole corpus at 200 wpm'],
+    ['Avg readability',(s.avg_readability ?? 0).toFixed(1), 'Mean Flesch score']
+  ];
+
+  $('kpiGrid').innerHTML = cards.map(([k, v, sub]) =>
+    `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`
+  ).join('');
+
+  $('dbName').textContent = s.db_file || 'counter.db';
+  $('footStats').textContent =
+    `${fmt(s.overall)} entries · ${fmt(s.total_words)} words · last saved ${s.last_entry_at || '—'}`;
+}
+
+/* ===================================================================
+   SECTION 6 — charts (single-series, sequential gold, hover tooltips)
+   =================================================================== */
+let dayData = [], weekData = [], hourData = [];
+
+function renderDaywise(){
+  const metric = $('metricSelect').value;
+  const host = $('dayChart');
+  if (!dayData.length){ host.innerHTML = '<div class="empty">No data yet</div>'; return; }
+
+  const W = 640, H = 250, PL = 42, PR = 12, PT = 18, PB = 34;
+  const iw = W - PL - PR, ih = H - PT - PB;
+  const raw = Math.max(1, ...dayData.map(d => d[metric]));
+
+  /* "nice" axis: round the top up to a clean step so tick labels are
+     always distinct integers (a 0,1,2,2,3 axis is a classic bug). */
+  const ticks = Math.min(4, raw);
+  const stepVal = Math.max(1, Math.ceil(raw / ticks));
+  const max = stepVal * ticks;
+
+  const bw  = Math.min(46, iw / dayData.length * 0.62);
+  const step = iw / dayData.length;
+
+  let grid = '';
+  for (let i = 0; i <= ticks; i++){
+    const y = PT + ih - (ih * i / ticks);
+    const v = stepVal * i;
+    grid += `<line class="grid-line" x1="${PL}" y1="${y}" x2="${W - PR}" y2="${y}"/>
+             <text class="axis-text" x="${PL - 8}" y="${y + 3}" text-anchor="end">${fmt(v)}</text>`;
+  }
+
+  let bars = '';
+  dayData.forEach((d, i) => {
+    const v = d[metric];
+    const h = v ? Math.max(3, ih * v / max) : 2;
+    const x = PL + step * i + (step - bw) / 2;
+    const y = PT + ih - h;
+    const fill = d.is_today ? 'var(--g6)' : (v ? 'var(--g4)' : 'rgba(255,255,255,.06)');
+
+    bars += `<rect class="bar-mark" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}"
+               height="${h.toFixed(1)}" rx="4" fill="${fill}"
+               data-i="${i}" style="cursor:pointer"/>`;
+
+    if (v && (dayData.length <= 14 || d.is_today))
+      bars += `<text class="val-label" x="${(x + bw/2).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle">${v}</text>`;
+
+    if (dayData.length <= 16 || i % Math.ceil(dayData.length / 10) === 0)
+      bars += `<text class="axis-text" x="${(x + bw/2).toFixed(1)}" y="${H - 14}" text-anchor="middle"
+                 ${d.is_today ? 'fill="#f2cf5b"' : ''}>${d.day_name}</text>
+               <text class="axis-text" x="${(x + bw/2).toFixed(1)}" y="${H - 3}" text-anchor="middle"
+                 opacity=".62">${d.display.split(' ')[1]}</text>`;
+  });
+
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Entries per day">
+      ${grid}<line class="grid-line" x1="${PL}" y1="${PT + ih}" x2="${W - PR}" y2="${PT + ih}" stroke="rgba(212,175,55,.3)"/>
+      ${bars}</svg>`;
+
+  const label = { count:'entries', words:'words', chars:'characters' }[metric];
+  host.querySelectorAll('rect[data-i]').forEach(r => {
+    const d = dayData[+r.dataset.i];
+    r.addEventListener('mousemove', e => {
+      const rows = [`${fmt(d.count)} entries · ${fmt(d.words)} words`];
+      /* only lead with the selected measure when it is not already the
+         line below, otherwise the tooltip repeats itself */
+      if (metric !== 'count') rows.unshift(`${fmt(d[metric])} ${label}`);
+      if (d.count) rows.push(`avg word length ${d.avg_word_len}`);
+      showTip(e, `${d.display} · ${d.day_name}`, rows);
+    });
+    r.addEventListener('mouseleave', hideTip);
+  });
+}
+
+function renderWeekday(){
+  const host = $('weekChart');
+  if (!weekData.length){ host.innerHTML = '<div class="empty">No data yet</div>'; return; }
+
+  const max = Math.max(1, ...weekData.map(d => d.count));
+  const todayIdx = new Date().getDay();
+
+  host.innerHTML = `<div style="display:flex;flex-direction:column;gap:11px">` +
+    weekData.map(d => `
+      <div style="display:grid;grid-template-columns:38px 1fr 42px;gap:11px;align-items:center"
+           data-wd="${d.weekday}">
+        <span class="axis-text" style="font-size:11px;${d.weekday === todayIdx ? 'fill:none;color:var(--gold-bright);font-weight:700' : 'color:var(--ink-3)'}">${d.short}</span>
+        <div style="height:12px;border-radius:999px;background:rgba(255,255,255,.05);overflow:hidden">
+          <div style="height:100%;width:${(d.count / max * 100).toFixed(1)}%;border-radius:999px;
+               background:${d.weekday === todayIdx ? 'var(--g6)' : 'linear-gradient(90deg,var(--gold-deep),var(--g5))'};
+               transition:width .6s cubic-bezier(.4,0,.2,1)"></div>
+        </div>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--ink-2);text-align:right">${fmt(d.count)}</span>
+      </div>`).join('') + `</div>`;
+
+  host.querySelectorAll('[data-wd]').forEach(row => {
+    const d = weekData[+row.dataset.wd];
+    row.addEventListener('mousemove', e => showTip(e, d.name, [
+      `${fmt(d.count)} entries`, `${fmt(d.words)} words`
+    ]));
+    row.addEventListener('mouseleave', hideTip);
+  });
+}
+
+function renderHourly(){
+  const host = $('heatGrid');
+  const max = Math.max(1, ...hourData.map(h => h.count));
+  const total = hourData.reduce((s, h) => s + h.count, 0);
+
+  host.innerHTML = hourData.map(h => {
+    const ratio = h.count / max;
+    let bg = 'var(--g1)';
+    if (h.count === 0) bg = 'rgba(255,255,255,.028)';
+    else if (ratio > 0.83) bg = 'var(--g6)';
+    else if (ratio > 0.63) bg = 'var(--g5)';
+    else if (ratio > 0.42) bg = 'var(--g4)';
+    else if (ratio > 0.21) bg = 'var(--g3)';
+    else bg = 'var(--g2)';
+    const hot = ratio > 0.63 && h.count > 0;
+    return `<div class="heat-cell ${hot ? 'hot' : ''}" style="background:${bg}" data-h="${h.hour}">
+              <span>${String(h.hour).padStart(2, '0')}</span>
+            </div>`;
+  }).join('');
+
+  const peak = hourData.reduce((a, b) => b.count > a.count ? b : a, hourData[0]);
+  $('hourSummary').textContent = `${fmt(total)} entries on this date`;
+  $('peakNote').textContent = total ? `Busiest: ${peak.label} (${peak.count})` : 'No activity on this date';
+
+  host.querySelectorAll('[data-h]').forEach(cell => {
+    const h = hourData[+cell.dataset.h];
+    cell.addEventListener('mousemove', e => showTip(e, `${h.label} – ${String((h.hour + 1) % 24).padStart(2,'0')}:00`, [
+      `${fmt(h.count)} entries`, `${fmt(h.words)} words · ${fmt(h.chars)} chars`
+    ]));
+    cell.addEventListener('mouseleave', hideTip);
+  });
+}
+
+/* ===================================================================
+   SECTION 7 — history table
+   =================================================================== */
+let openRow = null;
+
+function renderHistory(rows){
+  const body = $('historyBody');
+  if (!rows.length){
+    body.innerHTML = `<tr><td colspan="7"><div class="empty"><b>Nothing here yet</b>
+      Saved entries will appear in this table with their metrics.</div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map(r => `
+    <tr data-id="${r.id}">
+      <td class="cell-id">#${r.id}</td>
+      <td class="cell-text">${esc((r.text || '').slice(0, 160))}${(r.text || '').length > 160 ? '…' : ''}</td>
+      <td><span class="pill">${fmt(r.word_count)}</span></td>
+      <td><span class="pill">${fmt(r.char_count)}</span></td>
+      <td class="cell-time">${secs(r.reading_seconds)}</td>
+      <td class="cell-time">${esc(r.date_str || '')}<br><span style="opacity:.62">${esc(r.time_str || '')}</span></td>
+      <td style="white-space:nowrap">
+        <button class="btn sm" onclick="toggleDetail(${r.id})">Detail</button>
+        <button class="btn sm danger" onclick="removeEntry(${r.id})">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function toggleDetail(id){
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  if (!tr) return;
+
+  const existing = tr.nextElementSibling;
+  if (existing && existing.classList.contains('row-detail')){
+    existing.remove(); openRow = null; return;
+  }
+  document.querySelectorAll('.row-detail').forEach(e => e.remove());
+
+  let entry;
+  try { entry = await api(`/api/texts/${id}`); }
+  catch(e){ toast(e.message, true); return; }
+
+  const items = [
+    ['Words', fmt(entry.word_count)], ['Unique', fmt(entry.unique_word_count)],
+    ['Chars', fmt(entry.char_count)], ['No spaces', fmt(entry.char_no_space)],
+    ['Sentences', fmt(entry.sentence_count)], ['Paragraphs', fmt(entry.paragraph_count)],
+    ['Lines', fmt(entry.line_count)], ['Syllables', fmt(entry.syllable_count)],
+    ['Avg word', (entry.avg_word_len ?? 0).toFixed(2)], ['Avg sentence', (entry.avg_sentence_len ?? 0).toFixed(2)],
+    ['Diversity', (entry.lexical_diversity ?? 0) + '%'], ['Flesch', (entry.flesch_score ?? 0).toFixed(1)],
+    ['Reading', secs(entry.reading_seconds)], ['Speaking', secs(entry.speaking_seconds)]
+  ];
+
+  const kw = (entry.keywords || []).slice(0, 8)
+    .map(k => `<span class="pill" style="margin:3px 4px 0 0">${esc(k.word)} · ${k.count}</span>`).join('');
+
+  const row = document.createElement('tr');
+  row.className = 'row-detail';
+  row.innerHTML = `<td colspan="7">
+      <div style="font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--gold-ink);margin-bottom:11px">
+        Entry #${entry.id} · ${esc(entry.readability || '')} · saved ${esc(entry.created_at || '')}
+      </div>
+      <div class="detail-grid">
+        ${items.map(([k, v]) => `<div class="d"><b>${v}</b><span>${k}</span></div>`).join('')}
+      </div>
+      ${kw ? `<div style="margin-top:14px"><div style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px">Keywords</div>${kw}</div>` : ''}
+      <div style="margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(0,0,0,.35);border:1px solid var(--stroke);line-height:1.65;font-size:13px;white-space:pre-wrap">${esc(entry.text)}</div>
+      <div style="margin-top:12px"><button class="btn sm" onclick='loadIntoComposer(${JSON.stringify(entry.text)})'>Load into composer</button></div>
+    </td>`;
+  tr.after(row);
+  openRow = id;
+}
+
+function loadIntoComposer(text){
+  $('inputText').value = text;
+  updateLive();
+  buildText(text);
+  $('inputText').focus();
+  scrollTo({ top:0, behavior:'smooth' });
+}
+
+/* ===================================================================
+   SECTION 8 — actions & data loading
+   =================================================================== */
+async function saveText(){
+  const el = $('inputText');
+  const text = el.value.trim();
+  if (!text){ toast('Type something first', true); el.focus(); return; }
+
+  $('btnSave').disabled = true;
+  try {
+    const entry = await api('/api/texts', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ text })
+    });
+    renderAnalysis(entry, `entry #${entry.id} (saved)`);
+    buildText(text);
+    el.value = '';
+    updateLive();
+    toast('Saved to SQLite · entry #' + entry.id);
+    await refreshAll();
+  } catch(e){
+    toast(e.message, true);
+  } finally {
+    $('btnSave').disabled = false;
+    el.focus();
+  }
+}
+
+async function analyzeOnly(){
+  const text = $('inputText').value.trim();
+  if (!text){ toast('Type something first', true); return; }
+  try {
+    const a = await api('/api/analyze', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ text })
+    });
+    renderAnalysis(a, 'current draft (not saved)');
+    buildText(text);
+    toast('Analyzed — not saved');
+  } catch(e){ toast(e.message, true); }
+}
+
+function clearInput(){
+  $('inputText').value = '';
+  updateLive();
+  buildText(DEFAULT_TEXT);
+  $('inputText').focus();
+}
+
+async function removeEntry(id){
+  try {
+    await api(`/api/texts/${id}`, { method:'DELETE' });
+    toast('Entry #' + id + ' deleted');
+    await refreshAll();
+  } catch(e){ toast(e.message, true); }
+}
+
+async function clearAll(){
+  if (!confirm('Delete every saved entry? This cannot be undone.')) return;
+  try {
+    const r = await api('/api/texts?confirm=true', { method:'DELETE' });
+    toast(`Cleared ${r.removed} entries`);
+    await refreshAll();
+  } catch(e){ toast(e.message, true); }
+}
+
+function exportData(fmtType){
+  window.open('/api/export?format=' + fmtType, '_blank');
+}
+
+function resetFilters(){
+  $('searchInput').value = '';
+  $('dateFilter').value = '';
+  $('sortSelect').value = 'newest';
+  loadHistory();
+}
+
+let debounceTimer;
+function debouncedLoad(){
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(loadHistory, 260);
+}
+
+async function loadHistory(){
+  const params = new URLSearchParams({ limit:100, sort:$('sortSelect').value });
+  const s = $('searchInput').value.trim();
+  const d = $('dateFilter').value;
+  if (s) params.set('search', s);
+  if (d) params.set('date', d);
+  try { renderHistory(await api('/api/texts?' + params)); }
+  catch(e){ toast(e.message, true); }
+}
+
+async function loadDaywise(){
+  try {
+    dayData = await api('/api/stats/daywise?days=' + $('rangeSelect').value);
+    renderDaywise();
+  } catch(e){ toast(e.message, true); }
+}
+
+async function loadHourly(){
+  const d = $('hourDate').value;
+  try {
+    hourData = await api('/api/stats/hourly' + (d ? '?date=' + d : ''));
+    renderHourly();
+  } catch(e){ toast(e.message, true); }
+}
+
+async function refreshAll(){
+  try {
+    const [summary] = await Promise.all([ api('/api/stats') ]);
+    renderKPIs(summary);
+    weekData = await api('/api/stats/weekday');
+    renderWeekday();
+    await Promise.all([ loadDaywise(), loadHourly(), loadHistory() ]);
+  } catch(e){ toast('Could not reach the API: ' + e.message, true); }
+}
+
+/* ===================================================================
+   SECTION 9 — boot
+   =================================================================== */
+function tickClock(){
+  const now = new Date();
+  $('clockChip').textContent = now.toLocaleTimeString('en-GB');
+}
+
+let typeTimer;
+function onType(){
+  updateLive();
+  /* short debounce: the build is incremental now, so a keystroke only
+     ever creates the one new letter */
+  clearTimeout(typeTimer);
+  typeTimer = setTimeout(() => buildText($('inputText').value), 70);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initStage();
+
+  $('hourDate').value = new Date().toISOString().slice(0, 10);
+
+  $('inputText').addEventListener('input', onType);
+  $('inputText').addEventListener('keydown', e => {
+    /* Enter saves. Shift+Enter inserts a line break, so multi-line
+       entries are still possible. */
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); saveText(); }
+  });
+
+  addEventListener('mousemove', e => { if (tip.style.opacity == 1) moveTip(e); });
+
+  tickClock(); setInterval(tickClock, 1000);
+  updateLive();
+  refreshAll();
+  setInterval(() => api('/api/stats').then(renderKPIs).catch(() => {}), 30000);
+});
+</script>
+</body>
+</html>
