@@ -1,9 +1,110 @@
-# 3D Text Counter &amp; Deep Text Analytics
+# 🔤 3D Text Counter & Deep Text Analytics
 
-A local-first text analytics dashboard. Type or paste text, and the app
-extrudes it as real 3D metallic type, measures it on 20+ linguistic
-dimensions, stores it in SQLite, and charts your writing activity by day,
-weekday and hour.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-local--first-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-3D%20typography-black?logo=three.js&logoColor=white)](https://threejs.org/)
+[![Documentation](https://img.shields.io/badge/Documentation-Project_Specification_(PDF)-red?logo=adobeacrobatreader&logoColor=white)](docs/Project_Documentation.pdf)
+[![Presentation](https://img.shields.io/badge/Presentation-16%3A9_Slides_(PPTX)-orange?logo=microsoftpowerpoint&logoColor=white)](docs/Project_Presentation.pptx)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**A local-first text analytics dashboard.** Type or paste text and watch it turn into real, extruded 3D metallic type — while the app measures 20+ linguistic metrics, saves every entry to SQLite, and charts your writing activity by day, weekday and hour.
+
+No accounts. No cloud. Your text never leaves your computer.
+
+[📄 Read Full Technical Specification (PDF)](docs/Project_Documentation.pdf) • [📊 View Presentation Deck (PPTX)](docs/Project_Presentation.pptx) • [🚀 Quick Start](#-getting-started)
+
+<p align="center">
+  <img src="docs/hero.png" alt="3D Text Counter dashboard with live extruded gold 3D headline" width="900">
+</p>
+
+---
+
+## 📚 Project Documentation & Presentation Deck
+
+For academic reviews, portfolio showcases, technical deep-dives, or presentation meetings, full formal artifacts are provided:
+
+| Document | Format | Description |
+|---|---|---|
+| [**Technical Specification & Project Report**](docs/Project_Documentation.pdf) | `PDF` (9 Pages) | Comprehensive engineering documentation: mathematical formulas (Flesch, syllable heuristics), database schema, 3D WebGL mesh architecture, REST API catalog, and security analysis. Built natively with ReportLab. *(Viewable directly in GitHub!)* |
+| [**Project Presentation Deck**](docs/Project_Presentation.pptx) | `PPTX` (10 Slides) | 16:9 widescreen presentation deck with dark luxury aesthetic, cards, metrics, architecture diagrams, and high-res screenshots. Ready for college viva, hackathon pitches, or interviews. |
+
+---
+
+## 📸 Screenshots
+
+### Live 3D typing
+Every letter is real extruded geometry, and the headline follows what you type.
+
+<p align="center">
+  <img src="docs/3d-typing.png" alt="Typing text and seeing it extruded live in 3D gold" width="900">
+</p>
+
+### Full metric breakdown
+20+ linguistic measurements per entry: counts, composition, readability, reading/speaking time and top keywords.
+
+<p align="center">
+  <img src="docs/metrics.png" alt="Text Intelligence panel with full metric breakdown and Flesch readability" width="900">
+</p>
+
+### Overview KPIs
+Total entries, today vs yesterday, peak hour, average readability and more at a glance.
+
+<p align="center">
+  <img src="docs/overview.png" alt="Overview cards showing total entries, words, peak hour and readability" width="900">
+</p>
+
+### Activity over time
+Day-wise chart, weekday pattern and a 24-hour rhythm heatmap.
+
+<p align="center">
+  <img src="docs/activity.png" alt="Day-wise entries chart, weekday pattern and 24-hour heatmap" width="900">
+</p>
+
+### Searchable history
+Search, filter by date, sort, open details, delete, and export to CSV or JSON.
+
+<p align="center">
+  <img src="docs/history.png" alt="Saved entries history table with search, date filter and sorting" width="900">
+</p>
+
+---
+
+## ✨ Features
+
+### 📝 Deep Text Analysis
+- **Counts:** characters (with/without spaces), words, unique words, sentences, lines, paragraphs, syllables
+- **Composition:** letters, digits, spaces, punctuation, uppercase, lowercase, vowels, consonants, emoji
+- **Derived metrics:** average word and sentence length, lexical diversity, longest/shortest word
+- **Reading time** (200 wpm) and **speaking time** (130 wpm)
+- **Flesch Reading Ease** with a readability band (Very Easy → Very Difficult)
+- **Keywords** extracted after removing English stop-words
+- Analysis runs **live as you type**, and again when you save
+
+### 🎨 Real 3D Typography
+- Every letter is its own extruded, bevelled `TextGeometry` mesh — not a CSS trick
+- **Incremental animation:** new letters drop in, removed letters spin and fade, unchanged letters keep running — typing feels continuous
+- Studio **environment map** + warm key, cool rim and front-fill lights for convincing metal
+- Four finishes: **Polished Gold, Brushed Brass, Champagne, Antique Bronze**
+- Pause/resume spin with smooth easing
+- Graceful fallback to extruded slabs if the typeface fails to load, and the dashboard still works without WebGL
+
+### 📊 Writing Analytics Dashboard
+- Entries per day (zero-filled so the timeline never breaks)
+- 24-hour heatmap for any chosen date
+- Lifetime weekday distribution
+- Peak hour, peak day, active-day count, today vs yesterday change
+- Corpus-wide keyword ranking
+
+### 💾 Data Management
+- Search, sort (newest / oldest / longest / most words) and filter by date
+- View or delete single entries, or wipe everything with explicit confirmation
+- **Export to CSV or JSON**
+- Self-migrating database: old `counter.db` files upgrade in place with no data loss
+
+---
+
+## 🏗️ Architecture
 
 ```
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
@@ -16,83 +117,107 @@ weekday and hour.
                     └──────────────┘
 ```
 
----
+`analytics.py` has no database or web dependencies, so it is easy to unit-test and reuse on its own.
 
-## 1. Running it
+## 🛠️ Tech Stack
 
-### Windows
-Double-click **`run.bat`**. It checks for Python, installs the dependencies
-the first time, starts the server and opens your browser.
-
-### macOS / Linux
-```bash
-chmod +x run.sh
-./run.sh
-```
-
-### Manual
-```bash
-pip install -r requirements.txt
-python app.py
-```
-
-The server picks port **8000** when it is free and any free port otherwise,
-then opens `http://127.0.0.1:<port>` automatically. Interactive API docs are
-at `/docs`. Press `Ctrl+C` in the terminal to stop it.
-
-> The 3D headline pulls Three.js and one typeface from a CDN, so the first
-> load needs internet. Everything else — analysis, storage, charts — is
-> fully offline. Without WebGL the page degrades gracefully and the whole
-> dashboard still works.
-
----
-
-## 2. Files
-
-| File | Role |
+| Technology | Purpose |
 |---|---|
-| `app.py` | FastAPI routes, export endpoints, launcher (free-port detection + browser open) |
-| `database.py` | SQLite schema, idempotent migration, aggregation queries |
-| `analytics.py` | Pure text-analysis engine — no DB, no web framework, unit-testable |
-| `templates/index.html` | The entire frontend: gold-on-black UI, Three.js stage, charts |
-| `requirements.txt` | Python dependencies |
-| `run.bat` / `run.sh` | One-click launchers |
-| `counter.db` | SQLite database (created automatically, migrated in place) |
+| Python 3.10+ | Core logic and text analysis |
+| FastAPI + Uvicorn | Backend API and server |
+| Pydantic | Request validation |
+| SQLite | Local persistent storage |
+| HTML / CSS / JavaScript | Frontend (single-file UI) |
+| Three.js | 3D typography |
+
+## 📁 Project Structure
+
+```text
+python-text-counter/
+├── app.py              # FastAPI routes, export endpoints, launcher (free-port detection + browser open)
+├── analytics.py        # Pure text-analysis engine
+├── database.py         # SQLite schema, migration, aggregation queries
+├── requirements.txt    # Python dependencies
+├── run.bat             # Windows one-click launcher
+├── run.sh              # macOS/Linux launcher
+├── LICENSE             # MIT Open Source License
+├── README.md
+├── docs/
+│   ├── Project_Documentation.pdf   # 9-page technical specification & report
+│   ├── Project_Presentation.pptx   # 10-slide 16:9 presentation deck
+│   └── *.png                       # Dashboard screenshots
+├── templates/
+│   └── index.html      # Dashboard UI, Three.js stage, charts
+└── static/
+    └── vendor/         # Local frontend assets
+```
+
+`counter.db` is created automatically on first run.
 
 ---
 
-## 3. What gets measured
+## 🚀 Getting Started
 
-Every entry is analyzed on save; the composer also analyzes live as you type.
+### Prerequisites
+- Python 3.10 or later
+- Git (to clone the repo)
+- Internet on the first load, for the Three.js library and typeface (unless you have bundled them in `static/vendor/`). Everything else works offline.
 
-**Counts** — characters, characters without spaces, words, unique words,
-sentences, lines, paragraphs, syllables.
+### 1. Clone
+```bash
+git clone https://github.com/prinspatel8055/python-text-counter.git
+cd python-text-counter
+```
 
-**Composition** — letters, digits, spaces, punctuation, uppercase, lowercase,
-vowels, consonants, emoji-range characters.
+### 2. Create a virtual environment (recommended)
 
-**Derived**
+**Windows**
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+**macOS / Linux**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 4. Run
+
+| Platform | Command |
+|---|---|
+| Windows | Double-click `run.bat` (or run `.\run.bat`) |
+| macOS / Linux | `chmod +x run.sh && ./run.sh` |
+| Any | `python app.py` |
+
+The server uses port **8000** if it is free, otherwise any free port, and opens `http://127.0.0.1:<port>` in your browser. If the browser doesn't open, check the terminal for the URL. Press `Ctrl+C` to stop.
+
+Interactive API docs live at **`/docs`**.
+
+---
+
+## 📐 How the metrics are defined
 
 | Metric | Definition |
 |---|---|
-| Average word length | mean characters per word |
-| Average sentence length | mean words per sentence |
-| Lexical diversity | unique ÷ total words, as a percentage — how repetitive the text is |
-| Longest / shortest word | longest and shortest single token |
-| Reading time | words ÷ 200 per minute (adult silent reading) |
-| Speaking time | words ÷ 130 per minute (comfortable speaking pace) |
+| Average word length | Mean characters per word |
+| Average sentence length | Mean words per sentence |
+| Lexical diversity | Unique ÷ total words, as a percentage |
+| Reading time | Words ÷ 200 per minute |
+| Speaking time | Words ÷ 130 per minute |
 | Flesch Reading Ease | `206.835 − 1.015 × (words/sentence) − 84.6 × (syllables/word)`, clamped 0–100 |
 | Readability band | Very Easy (80+), Easy (60+), Fairly Hard (50+), Difficult (30+), Very Difficult |
-| Keywords | most frequent words after removing a 130-word English stop-word list and tokens under 3 characters |
-
-**Time analytics** — entries per day (zero-filled so the timeline never
-breaks), a 24-hour heatmap for any chosen date, a lifetime weekday
-distribution, peak hour, peak day, active-day count, and today vs yesterday
-change.
+| Keywords | Most frequent words after removing a 130-word English stop-list and tokens under 3 characters |
 
 ---
 
-## 4. API reference
+## 🔌 API Reference
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -100,7 +225,7 @@ change.
 | `GET` | `/api/health` | Version and DB status |
 | `POST` | `/api/analyze` | Full metrics for a text **without saving** |
 | `POST` | `/api/texts` | Analyze + save; returns the stored entry |
-| `GET` | `/api/texts` | List entries — `limit`, `search`, `date`, `sort=newest\|oldest\|longest\|words` |
+| `GET` | `/api/texts` | List entries: `limit`, `search`, `date`, `sort=newest\|oldest\|longest\|words` |
 | `GET` | `/api/texts/{id}` | One entry with recomputed metrics and keywords |
 | `DELETE` | `/api/texts/{id}` | Delete one entry |
 | `DELETE` | `/api/texts?confirm=true` | Delete every entry |
@@ -109,10 +234,10 @@ change.
 | `GET` | `/api/stats/hourly?date=YYYY-MM-DD` | 24-slot breakdown |
 | `GET` | `/api/stats/weekday` | Lifetime weekday distribution |
 | `GET` | `/api/stats/keywords?limit=15` | Corpus-wide keywords |
-| `GET` | `/api/stats/overview?days=7` | Everything above in one round-trip |
+| `GET` | `/api/stats/overview?days=7` | All of the above in one round-trip |
 | `GET` | `/api/export?format=csv\|json` | Download the full table |
 
-Example:
+**Example**
 ```bash
 curl -X POST http://127.0.0.1:8000/api/analyze \
   -H "Content-Type: application/json" \
@@ -121,75 +246,62 @@ curl -X POST http://127.0.0.1:8000/api/analyze \
 
 ---
 
-## 5. The 3D stage
-
-The headline is genuine extruded geometry, not a CSS trick:
-
-* Each letter is its own extruded, bevelled `TextGeometry` mesh. Glyphs are
-  cached, so a letter you have typed before costs nothing to show again, and
-  letters are positioned using the typeface's real advance widths rather
-  than one fixed gap.
-* **The headline is built incrementally.** On every keystroke the new string
-  is diffed against what is already on stage: matching letters keep running
-  untouched, removed letters spin and fade out, and only genuinely new
-  letters are created — each dropping in from behind with a staggered
-  ease-out-back. That is why typing looks continuous instead of the whole
-  line flickering and rebuilding on each key.
-* An **environment map** (a small studio painted into a canvas: warm
-  ceiling, two light strips, dark floor) is what makes the metal look like
-  metal. A polished surface shows what surrounds it, not its own colour, so
-  lamps alone leave a few hot spots on an otherwise black shape. Lamps —
-  warm key, cool rim, front fill — sit on top of that.
-* Output is ACES-filmic tone-mapped and sRGB-encoded, and material colours
-  are converted from sRGB to linear first, otherwise the gold washes out to
-  pale silver.
-* **Finish** cycles four materials — Polished Gold, Brushed Brass,
-  Champagne, Antique Bronze — by repainting the existing letters, so the
-  animation never restarts. **Pause spin** eases the rotation to a stop
-  rather than snapping.
-* If the typeface fails to load, the scene falls back to per-letter extruded
-  slabs with canvas-drawn glyph faces, so you always get 3D text.
-
-The headline follows the first line of your input (70 ms debounce),
-truncates at a word boundary around 20 characters so long paragraphs do not
-shrink the type to nothing, and drops characters the Latin typeface cannot
-draw. When the box is empty it shows **JAY MELDI MAA** — change
-`DEFAULT_TEXT` near the top of the stage code in `templates/index.html` to
-set your own.
-
----
-
-## 6. Database
-
-Single table, `texts`, one row per entry. `init_db()` is an idempotent
-migrator: it creates the table, `ALTER TABLE`s in any metric column added by
-a newer version, and back-fills those columns for rows written by an older
-build — so an existing `counter.db` upgrades in place with no data loss.
-Indexes cover `created_at`, `date_str`, `hour` and `weekday`.
-
-The DB path is resolved relative to `database.py`, so the app works no matter
-which directory you launch it from.
-
----
-
-## 7. Keyboard
+## ⌨️ Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
 | `Enter` | Analyze and save the entry |
-| `Shift` + `Enter` | Insert a line break instead of saving |
+| `Shift` + `Enter` | Insert a line break |
+
+## 🎛️ Customizing
+
+- **Default headline:** when the input is empty, the 3D stage shows `JAY MELDI MAA`. Change `DEFAULT_TEXT` near the top of the stage code in `templates/index.html` to use your own.
+- The headline follows the first line of your input, truncates at a word boundary around 20 characters, and skips characters the Latin typeface cannot draw.
 
 ---
 
-## 8. Notes and limits
+## 🔒 Privacy & Security
 
-* Syllable counting is a vowel-group heuristic, so Flesch scores are
-  indicative rather than exact — good for comparing your own entries, not
-  for formal readability certification.
-* Sentence splitting is regex-based and will count `Dr.` or `e.g.` as a
-  sentence break.
-* The stop-word list is English only; keyword extraction on other languages
-  will surface common function words.
-* Everything runs on `127.0.0.1` with no authentication — it is a personal
-  local tool, not a multi-user service. Do not expose it to a network
-  without adding auth.
+- Everything runs on `127.0.0.1`; text is stored only in a local SQLite file.
+- There is **no authentication**. This is a personal tool, so do not expose it to a network without adding auth.
+- Don't commit your `counter.db` or private text to a public repository (add `counter.db` to `.gitignore`).
+
+## ⚠️ Known Limitations
+
+- Syllable counting is a vowel-group heuristic, so Flesch scores are indicative, good for comparing your own entries but not for formal certification.
+- Sentence splitting is regex-based and treats `Dr.` or `e.g.` as a sentence break.
+- The stop-word list is English only; other languages will surface common function words as keywords.
+- The 3D stage needs WebGL and its CDN assets; without them the rest of the dashboard still works.
+
+## 🗺️ Roadmap
+
+- [ ] Unit and integration tests for `analytics.py`
+- [ ] Language-aware analysis and stop-words
+- [ ] Mobile-friendly layout and accessibility improvements
+- [ ] More export formats and reports
+- [ ] Optional user accounts for multi-user deployments
+
+## 🤝 Contributing
+
+Issues and pull requests are welcome. Found a bug or have an idea? [Open an issue](https://github.com/prinspatel8055/python-text-counter/issues).
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LICENSE) file for full details.
+
+## 👨‍💻 Author & Maintainer
+
+**Prince Patel** — [@prinspatel8055](https://github.com/prinspatel8055)
+
+---
+
+<div align="center">
+
+### ⭐ Support This Project
+
+If you found **3D Text Counter & Deep Text Analytics** useful, intuitive, or visually inspiring, please give it a star on GitHub!  
+It costs nothing and helps fellow developers, linguists, and researchers discover this local-first tool.
+
+[![GitHub Repo stars](https://img.shields.io/github/stars/prinspatel8055/python-text-counter?style=social)](https://github.com/prinspatel8055/python-text-counter)
+
+</div>
